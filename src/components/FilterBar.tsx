@@ -1,5 +1,5 @@
 import React from 'react';
-import { Filter, Search, Building2, Layers, AlertCircle, RotateCcw } from 'lucide-react';
+import { Filter, Search, Building2, Layers, AlertCircle, RotateCcw, Database } from 'lucide-react';
 import { Branch, Category, FilterState, BranchId, CategoryId } from '../types';
 
 interface FilterBarProps {
@@ -9,6 +9,7 @@ interface FilterBarProps {
   lowStockCount: number;
   onFilterChange: (newFilters: Partial<FilterState>) => void;
   onResetFilters: () => void;
+  onResetMockData?: () => void;
 }
 
 export const FilterBar: React.FC<FilterBarProps> = ({
@@ -18,6 +19,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
   lowStockCount,
   onFilterChange,
   onResetFilters,
+  onResetMockData,
 }) => {
   return (
     <div className="bg-slate-900/90 backdrop-blur border-b border-slate-800 py-2 px-3 sm:px-6 lg:px-8">
@@ -105,6 +107,17 @@ export const FilterBar: React.FC<FilterBarProps> = ({
               title="รีเซ็ตตัวกรอง"
             >
               <RotateCcw className="w-3.5 h-3.5" />
+            </button>
+          )}
+
+          {onResetMockData && (
+            <button
+              onClick={onResetMockData}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-emerald-950/60 hover:bg-emerald-900/80 text-emerald-300 border border-emerald-700/50 text-xs font-medium transition-all shadow-sm"
+              title="รีเซ็ตและโหลดข้อมูลจำลอง C-minor เข้าสู่ Firebase Firestore"
+            >
+              <Database className="w-3.5 h-3.5 text-emerald-400" />
+              <span className="hidden md:inline">ข้อมูลจำลอง Firebase</span>
             </button>
           )}
         </div>

@@ -136,6 +136,40 @@ async function startServer() {
     });
   });
 
+  // Reset/Seed Mock Data into Server Store and Firebase Firestore
+  app.post("/api/admin/reset-mock-data", async (req, res) => {
+    try {
+      productsStore = [...initialProducts];
+      dailyCutoffsStore = [...initialDailyCutoffs];
+      salesRepsStore = [...initialSalesReps];
+      ecountConfigStore = { ...initialECountConfig };
+      salesTargetStore = { ...initialSalesTarget };
+
+      // Persist all mock data to Firebase Firestore
+      await persistAllProductsToFirebase(productsStore);
+      for (const c of dailyCutoffsStore) {
+        await persistCutoffToFirebase(c);
+      }
+      for (const r of salesRepsStore) {
+        await persistSalesRepToFirebase(r);
+      }
+      await persistECountConfigToFirebase(ecountConfigStore);
+      await persistSalesTargetToFirebase(salesTargetStore);
+
+      console.log("♻️ Reset and seeded all mock data to Firebase Firestore successfully.");
+      res.json({
+        success: true,
+        message: "โหลดและบันทึกข้อมูลจำลอง C-minor ลงใน Firebase Firestore สำเร็จเรียบร้อยแล้ว!",
+      });
+    } catch (err: any) {
+      console.error("Error resetting mock data to Firebase:", err);
+      res.status(500).json({
+        success: false,
+        message: err?.message || "ไม่สามารถรีเซ็ตข้อมูลจำลองได้",
+      });
+    }
+  });
+
   // ECount ERP Config Get & Update
   app.get("/api/ecount/config", (req, res) => {
     res.json(ecountConfigStore);

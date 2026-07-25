@@ -13,6 +13,16 @@ import { RestockModal } from './components/RestockModal';
 import { ExcelPdfDataModal } from './components/ExcelPdfDataModal';
 import { CheckCircle2, AlertTriangle, RefreshCw } from 'lucide-react';
 import {
+  initialBranches,
+  initialCategories,
+  initialProducts,
+  initialSalesTarget,
+  initialDailyCutoffs,
+  initialWeeklySales,
+  initialSalesReps,
+  initialECountConfig,
+} from './mockData';
+import {
   Branch,
   Category,
   ProductItem,
@@ -92,17 +102,25 @@ export default function App() {
       if (!res.ok) throw new Error('ไม่สามารถดึงข้อมูลแดชบอร์ดได้');
       const data = await res.json();
 
-      setBranches(data.branches || []);
-      setCategories(data.categories || []);
-      setProducts(data.products || []);
-      setSalesTarget(data.salesTarget || null);
-      setDailyCutoffs(data.dailyCutoffs || []);
-      setWeeklySales(data.weeklySales || []);
-      setSalesReps(data.salesReps || []);
+      setBranches(data.branches && data.branches.length > 0 ? data.branches : initialBranches);
+      setCategories(data.categories && data.categories.length > 0 ? data.categories : initialCategories);
+      setProducts(data.products || initialProducts);
+      setSalesTarget(data.salesTarget || initialSalesTarget);
+      setDailyCutoffs(data.dailyCutoffs || initialDailyCutoffs);
+      setWeeklySales(data.weeklySales || initialWeeklySales);
+      setSalesReps(data.salesReps || initialSalesReps);
       if (data.ecountConfig) setEcountConfig(data.ecountConfig);
     } catch (err: any) {
-      console.error(err);
-      showToast('เกิดข้อผิดพลาดในการโหลดข้อมูล', true);
+      console.error('Error loading dashboard, using fallback mock data:', err);
+      setBranches(initialBranches);
+      setCategories(initialCategories);
+      setProducts(initialProducts);
+      setSalesTarget(initialSalesTarget);
+      setDailyCutoffs(initialDailyCutoffs);
+      setWeeklySales(initialWeeklySales);
+      setSalesReps(initialSalesReps);
+      setEcountConfig(initialECountConfig);
+      showToast('กำลังใช้งานข้อมูลจำลอง C-minor', false);
     } finally {
       setIsLoading(false);
     }
@@ -111,6 +129,25 @@ export default function App() {
   useEffect(() => {
     loadDashboardData();
   }, [loadDashboardData]);
+
+  // Reset/Seed Mock Data into Firebase Firestore
+  const handleResetMockData = async () => {
+    setIsLoading(true);
+    try {
+      const res = await fetch('/api/admin/reset-mock-data', { method: 'POST' });
+      const data = await res.json();
+      if (data.success) {
+        showToast(data.message || 'โหลดข้อมูลจำลองเข้าสู่ Firebase Firestore เรียบร้อย!');
+        await loadDashboardData();
+      } else {
+        showToast(data.message || 'เกิดข้อผิดพลาดในการโหลดข้อมูลจำลอง', true);
+      }
+    } catch (err) {
+      showToast('เกิดข้อผิดพลาดในการบันทึกข้อมูลจำลองเข้า Firebase', true);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // Sync with ECount ERP
   const handleSyncECount = async () => {
@@ -334,6 +371,7 @@ export default function App() {
         lowStockCount={products.filter((p) => p.stock <= p.minStockLevel).length}
         onFilterChange={handleFilterChange}
         onResetFilters={handleResetFilters}
+        onResetMockData={handleResetMockData}
       />
 
       {/* Main Container */}
