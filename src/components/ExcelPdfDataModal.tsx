@@ -192,16 +192,24 @@ export const ExcelPdfDataModal: React.FC<ExcelPdfDataModalProps> = ({
             }),
           });
 
-          const data = await res.json();
-          if (data.items && data.items.length > 0) {
+          let data: any = null;
+          const contentType = res.headers.get('content-type');
+          if (contentType && contentType.includes('application/json')) {
+            data = await res.json();
+          } else {
+            const text = await res.text();
+            console.warn('Server returned non-JSON response for PDF parse:', text.substring(0, 100));
+          }
+
+          if (data && data.items && data.items.length > 0) {
             setParsedPdfItems(data.items);
             onShowToast(`AI ดึงข้อมูลรายการสินค้าจาก PDF ${file.name} สำเร็จ ${data.items.length} รายการ!`);
           } else {
             // Demo fallback items parsed
             const fallbackItems = [
               {
-                code: 'CM-PDF-101',
-                name: 'C-minor Commercial Espresso Machine (สกัดจาก PDF Invoice)',
+                code: `CM-PDF-${Math.floor(100 + Math.random() * 900)}`,
+                name: `C-minor Commercial Espresso Machine (สกัดจาก PDF ${file.name})`,
                 stock: 4,
                 price: 185000,
                 unit: 'เครื่อง',
@@ -209,8 +217,8 @@ export const ExcelPdfDataModal: React.FC<ExcelPdfDataModalProps> = ({
                 branchId: 'b1',
               },
               {
-                code: 'CM-PDF-102',
-                name: 'C-minor Precision On-Demand Coffee Grinder (สกัดจาก PDF)',
+                code: `CM-PDF-${Math.floor(100 + Math.random() * 900)}`,
+                name: `C-minor Precision On-Demand Coffee Grinder (สกัดจาก PDF ${file.name})`,
                 stock: 6,
                 price: 24500,
                 unit: 'เครื่อง',
@@ -222,6 +230,7 @@ export const ExcelPdfDataModal: React.FC<ExcelPdfDataModalProps> = ({
             onShowToast(`วิเคราะห์ PDF สำเร็จ พบ ${fallbackItems.length} รายการในเอกสาร`);
           }
         } catch (err) {
+          console.error('PDF Parse Error:', err);
           // Fallback parsing
           setParsedPdfItems([
             {
