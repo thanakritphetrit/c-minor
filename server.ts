@@ -580,6 +580,26 @@ ${productsStore
     }
   });
 
+  // Catch-all 404 for API routes so it never returns HTML
+  app.use("/api/*", (req, res) => {
+    res.status(404).json({
+      success: false,
+      message: `ไม่พบ API Endpoint: ${req.originalUrl}`,
+    });
+  });
+
+  // Global Error Handler for API routes
+  app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+    if (req.path.startsWith("/api")) {
+      console.error("API Global Error Handler:", err);
+      return res.status(500).json({
+        success: false,
+        message: err?.message || "เกิดข้อผิดพลาดภายในระบบเซิร์ฟเวอร์",
+      });
+    }
+    next(err);
+  });
+
   // Vite Middleware in Development
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
