@@ -20,6 +20,15 @@ import {
   WeeklySalesData,
   SalesRep,
 } from "./src/types";
+import {
+  syncFirestoreOnStart,
+  persistProductToFirebase,
+  persistAllProductsToFirebase,
+  persistCutoffToFirebase,
+  persistSalesRepToFirebase,
+  persistECountConfigToFirebase,
+  persistSalesTargetToFirebase,
+} from "./src/lib/firestoreSync";
 
 // In-memory data store for live changes during session
 let productsStore: ProductItem[] = [...initialProducts];
@@ -48,6 +57,19 @@ const getGeminiClient = () => {
 async function startServer() {
   const app = express();
   const PORT = 3000;
+
+  // Sync data with Firebase Firestore on boot
+  try {
+    const synced = await syncFirestoreOnStart();
+    productsStore = synced.products;
+    dailyCutoffsStore = synced.cutoffs;
+    salesRepsStore = synced.salesReps;
+    ecountConfigStore = synced.ecountConfig;
+    salesTargetStore = synced.salesTarget;
+    console.log("🔥 Firebase Firestore synced successfully for project c-minor-dashboard");
+  } catch (err) {
+    console.error("Firebase startup sync error:", err);
+  }
 
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
@@ -131,6 +153,7 @@ async function startServer() {
       autoSyncIntervalMinutes: autoSyncIntervalMinutes || ecountConfigStore.autoSyncIntervalMinutes,
       lastSyncAt: new Date().toLocaleString("sv").replace("T", " "),
     };
+    persistECountConfigToFirebase(ecountConfigStore);
     res.json({ success: true, config: ecountConfigStore });
   });
 
@@ -244,6 +267,10 @@ async function startServer() {
     salesTargetStore.dailyRevenue += totalRev;
     salesTargetStore.monthlyRevenue += totalRev;
 
+    // Persist to Firebase
+    persistCutoffToFirebase(newCutoff);
+    persistSalesTargetToFirebase(salesTargetStore);
+
     res.json({
       success: true,
       cutoff: newCutoff,
@@ -298,7 +325,11 @@ async function startServer() {
       matchedRep.ordersToday += 1;
       matchedRep.lastActiveTime = "เมื่อสักครู่";
       matchedRep.status = "online";
+      persistSalesRepToFirebase(matchedRep);
     }
+
+    persistProductToFirebase(product);
+    persistSalesTargetToFirebase(salesTargetStore);
 
     res.json({
       success: true,
@@ -324,6 +355,8 @@ async function startServer() {
     const addQty = Number(addQuantity) || 0;
     product.stock += addQty;
     product.lastUpdated = new Date().toLocaleString("sv").replace("T", " ").slice(0, 16);
+
+    persistProductToFirebase(product);
 
     res.json({
       success: true,
@@ -372,6 +405,8 @@ async function startServer() {
       }
       importedCount++;
     });
+
+    persistAllProductsToFirebase(productsStore);
 
     res.json({
       success: true,
